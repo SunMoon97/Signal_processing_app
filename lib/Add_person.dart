@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:isar/isar.dart';
+import 'package:signal_processing/profile.dart';
 import 'person.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -19,6 +22,8 @@ class AddPersonScreenState extends State<AddPersonScreen> {
   int age = 0;
   late Position _currentPosition;
   late Geolocator _geolocator;
+  late StreamSubscription<Position> _positionStreamSubscription;
+  bool _isDisposed = false;
 
   @override
   void initState() {
@@ -49,13 +54,22 @@ class AddPersonScreenState extends State<AddPersonScreen> {
   }
 
   void _startLocationTracking() {
-    Geolocator.getPositionStream()
+    _positionStreamSubscription = Geolocator.getPositionStream()
         .timeout(const Duration(seconds: 30))
         .listen((Position position) {
-      setState(() {
-        _currentPosition = position;
-      });
+      if (!_isDisposed) {
+        setState(() {
+          _currentPosition = position;
+        });
+      }
     });
+  }
+
+  @override
+  void dispose() {
+    _isDisposed = true;
+    _positionStreamSubscription?.cancel();
+    super.dispose();
   }
 
   @override
@@ -120,14 +134,20 @@ class AddPersonScreenState extends State<AddPersonScreen> {
                   latitude: _currentPosition.latitude,
                   longitude: _currentPosition.longitude,
                 );
+
                 try {
-                  await widget.isar.writeTxn((Isar isar) async {
-                    await isar.persons.put(person);
-                  } as Future Function());
+                  if (_isDisposed) return;
+                  final isar = await widget.isar;
+                  isar.writeTxnSync(() => isar.persons.putSync(person));
+
                   print("Current Position: $_currentPosition");
-                  // Navigator.pop(context);
-                  if (!context.mounted) return;
-                  Navigator.of(context).pop();
+
+                  if (!mounted) return;
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => ProfileScreen(isar: widget.isar),
+                    ),
+                  );
                 } catch (e) {
                   // Handle any potential exceptions or errors here
                   print("Error occurred: $e");

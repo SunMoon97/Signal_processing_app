@@ -6,13 +6,18 @@ part 'person.g.dart';
 @Collection()
 class Person {
   Id id = Isar.autoIncrement;
-  late String bloodGroup;
-  late String name;
-  late int age;
-  late double latitude;
-  late double longitude;
+   String bloodGroup;
+   String name;
+   int age;
+   double latitude;
+   double longitude;
 
-  Person(
-     {required String bloodGroup, required String name, required int age, required double latitude, required double longitude}
-  );
+  Person({
+    required this.bloodGroup,
+    required this.name,
+    required this.age,
+    required this.latitude,
+    required this.longitude,
+  });
+
 }
